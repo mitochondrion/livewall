@@ -1,3 +1,11 @@
+## Push to github pages
+```bash
+npm run deploy
+```
+
+---
+(original boilerplate)
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
