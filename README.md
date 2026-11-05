@@ -61,9 +61,9 @@ The toolbar fades out after a couple of seconds without mouse movement.
 | Set | Contents |
 | --- | --- |
 | Newsroom · World | Sky, Al Jazeera, France 24, DW, Euronews, ABC Australia, CNA, WION, TRT World |
-| Newsroom · US | ABC, NBC, CBS, LiveNOW from FOX, PBS NewsHour, Bloomberg, Yahoo Finance, Reuters |
-| Trading Floor | Bloomberg, CNBC, Yahoo Finance, Reuters + CNA, Sky, Al Jazeera, DW, France 24 |
-| Mission Control | NASA, SpaceX, NASASpaceflight, ESA, ISS Earth view |
+| Newsroom · US | ABC, NBC, CBS, CNN Headlines, LiveNOW from FOX, Bloomberg, Yahoo Finance, Reuters |
+| Trading Floor | Bloomberg, Yahoo Finance, NDTV Profit, Reuters + NHK World, CNA, Sky, Al Jazeera, DW |
+| Mission Control | NASA, ISS HD views, Starbase and Space Coast pad cams (NASASpaceflight), Sen 4K Earth view |
 | Webcams · Cities & Wild | Shibuya, Abbey Road, Times Square, Jackson Hole, Venice, Dublin, Namib waterhole, ISS |
 | Electronics Store | 12 mixed: news, markets, space, webcams, lofi |
 
