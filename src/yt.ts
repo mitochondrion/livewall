@@ -1,17 +1,45 @@
 // Thin wrapper around one YouTube IFrame-API player.
-import { embedSrc } from './feeds.js';
+import { embedSrc } from './feeds';
+import type { PlayerStatus, Source } from './types';
 
 const NO_SIGNAL_AFTER_MS = 35_000; // never reached PLAYING → call it offline
-const RETRY_OFFLINE_MS = 180_000; // offline channels get retried periodically
+const RETRY_OFFLINE_MS = 180_000; // offline feeds get retried periodically
 
-let apiPromise;
-export function loadYT() {
+/** The slice of the YouTube IFrame API we use. */
+interface YTPlayer {
+  mute(): void;
+  unMute(): void;
+  setVolume(v: number): void;
+  playVideo(): void;
+  destroy(): void;
+}
+interface YTNamespace {
+  Player: new (
+    el: HTMLIFrameElement,
+    opts: {
+      events: {
+        onReady: () => void;
+        onStateChange: (e: { data: number }) => void;
+        onError: (e: { data: number }) => void;
+      };
+    },
+  ) => YTPlayer;
+}
+declare global {
+  interface Window {
+    YT?: YTNamespace;
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+let apiPromise: Promise<YTNamespace | null> | undefined;
+export function loadYT(): Promise<YTNamespace | null> {
   apiPromise ??= new Promise((resolve) => {
     if (window.YT?.Player) return resolve(window.YT);
     const prev = window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady = () => {
       prev?.();
-      resolve(window.YT);
+      resolve(window.YT ?? null);
     };
     const s = document.createElement('script');
     s.src = 'https://www.youtube.com/iframe_api';
@@ -21,23 +49,37 @@ export function loadYT() {
   return apiPromise;
 }
 
+const ERRORS: Record<number, string> = {
+  2: 'Bad video ID',
+  5: 'Player error',
+  100: 'Video removed or private',
+  101: 'Embedding disabled',
+  150: 'Embedding disabled',
+  153: 'Embed blocked (serve over http/https, not file://)',
+};
+
+export type StatusCallback = (status: PlayerStatus, detail?: string) => void;
+
 export class Player {
-  /**
-   * @param {HTMLElement} host   element the iframe is prepended into
-   * @param {object} feed        {ch}|{v}
-   * @param {(status:'loading'|'playing'|'offline', detail?:string)=>void} onStatus
-   */
-  constructor(host, feed, onStatus) {
-    this.host = host;
-    this.feed = feed;
-    this.onStatus = onStatus;
-    this.level = 0; // 0 = muted, else 1..100
-    this.fadeTimer = null;
-    this.ready = false;
-    this.mount();
+  /** Current volume 0..100 (0 = muted). */
+  level = 0;
+  private iframe?: HTMLIFrameElement;
+  private p?: YTPlayer;
+  private ready = false;
+  private muted = true;
+  private watchdog?: ReturnType<typeof setTimeout>;
+  private retry?: ReturnType<typeof setTimeout>;
+  private fadeTimer?: ReturnType<typeof setInterval>;
+
+  constructor(
+    private readonly host: HTMLElement,
+    private feed: Source & { t?: string },
+    private readonly onStatus: StatusCallback,
+  ) {
+    void this.mount();
   }
 
-  async mount() {
+  private async mount(): Promise<void> {
     clearTimeout(this.watchdog);
     clearTimeout(this.retry);
     this.ready = false;
@@ -46,8 +88,7 @@ export class Player {
     const iframe = document.createElement('iframe');
     iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
     iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-    iframe.setAttribute('loading', 'eager');
-    iframe.title = this.feed.t || 'Live stream';
+    iframe.title = this.feed.t ?? 'Live stream';
     iframe.src = embedSrc(this.feed, location.origin);
     this.iframe = iframe;
     this.host.prepend(iframe);
@@ -55,24 +96,24 @@ export class Player {
     this.watchdog = setTimeout(() => this.fail('No signal'), NO_SIGNAL_AFTER_MS);
 
     const YT = await loadYT();
-    if (this.iframe !== iframe) return; // reloaded while waiting
+    if (this.iframe !== iframe) return; // reloaded or destroyed while waiting
     if (!YT) return this.fail('Couldn’t load the YouTube player');
     this.p = new YT.Player(iframe, {
       events: {
         onReady: () => {
           this.ready = true;
-          this.p.mute();
-          this.p.setVolume(0);
-          this.p.playVideo();
+          this.p?.mute();
+          this.p?.setVolume(0);
+          this.p?.playVideo();
           if (this.level > 0) this.apply(this.level);
         },
         onStateChange: (e) => this.onState(e.data),
-        onError: (e) => this.fail(ERRORS[e.data] || `Error ${e.data}`),
+        onError: (e) => this.fail(ERRORS[e.data] ?? `Error ${e.data}`),
       },
     });
   }
 
-  onState(s) {
+  private onState(s: number): void {
     // 1 playing, 3 buffering, 2 paused, 0 ended, -1 unstarted, 5 cued
     if (s === 1) {
       clearTimeout(this.watchdog);
@@ -81,41 +122,46 @@ export class Player {
     } else if (s === 2 || s === 5 || s === 0) {
       // Live tiles should never sit paused; nudge them.
       try {
-        this.p.playVideo();
-      } catch {}
+        this.p?.playVideo();
+      } catch {
+        /* player not ready */
+      }
     }
   }
 
-  fail(detail) {
+  private fail(detail: string): void {
     clearTimeout(this.watchdog);
     this.onStatus('offline', detail);
     clearTimeout(this.retry);
-    this.retry = setTimeout(() => this.mount(), RETRY_OFFLINE_MS);
+    this.retry = setTimeout(() => void this.mount(), RETRY_OFFLINE_MS);
   }
 
-  reload() {
-    this.mount();
+  reload(): void {
+    void this.mount();
   }
 
-  setFeed(feed) {
+  setFeed(feed: Source & { t?: string }): void {
     this.feed = feed;
     this.level = 0;
-    this.mount();
+    void this.mount();
   }
 
-  destroy() {
+  destroy(): void {
     clearTimeout(this.watchdog);
     clearTimeout(this.retry);
     clearInterval(this.fadeTimer);
     try {
       this.p?.destroy();
-    } catch {}
+    } catch {
+      /* already gone */
+    }
     this.iframe?.remove();
+    this.iframe = undefined;
   }
 
   /** Apply a volume level immediately (0 mutes). */
-  apply(level) {
-    if (!this.ready) return;
+  private apply(level: number): void {
+    if (!this.ready || !this.p) return;
     try {
       if (level <= 0) {
         if (!this.muted) this.p.mute();
@@ -125,14 +171,15 @@ export class Player {
         this.muted = false;
         this.p.setVolume(Math.round(level));
       }
-    } catch {}
+    } catch {
+      /* player not ready */
+    }
   }
 
   /** Short linear fade so hover-switching doesn't pop. */
-  fadeTo(target, ms = 250) {
+  fadeTo(target: number, ms = 250): void {
     clearInterval(this.fadeTimer);
     const from = this.level;
-    this.target = target;
     if (from === target || ms <= 0) {
       this.level = target;
       return this.apply(target);
@@ -150,12 +197,3 @@ export class Player {
     }, 40);
   }
 }
-
-const ERRORS = {
-  2: 'Bad video ID',
-  5: 'Player error',
-  100: 'Video removed or private',
-  101: 'Embedding disabled',
-  150: 'Embedding disabled',
-  153: 'Embed blocked (serve over http/https, not file://)',
-};

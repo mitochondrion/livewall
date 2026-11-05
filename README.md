@@ -3,15 +3,29 @@
 A wall of live YouTube streams, with sound from one at a time. Think trading
 floor, newsroom, security desk, or a row of TVs in an electronics-store window.
 
-No build step and no dependencies: plain HTML, CSS and ES modules in `site/`.
+TypeScript (strict) + Vite, no runtime dependencies. The whole app is ~9 KB gzipped.
 
 ```bash
-npm start          # serves site/ at http://localhost:8080
-npm run check      # reports which built-in feeds are live right now (needs internet)
-npm run deploy     # publishes site/ to the gh-pages branch
+npm install
+npm run dev          # http://localhost:8080 with hot reload
+npm run build        # typecheck + production build into dist/
+npm run preview      # serve the production build locally
+npm run deploy       # build and publish dist/ to the gh-pages branch
 ```
 
-> YouTube refuses to embed from `file://`, so serve the page over http(s)
+| Script | |
+| --- | --- |
+| `npm run typecheck` | `tsc --noEmit` (strict, `noUncheckedIndexedAccess`) |
+| `npm run lint` | ESLint + typescript-eslint |
+| `npm run format` / `format:check` | Prettier |
+| `npm test` / `test:watch` | Vitest: URL parsing, layout math for 1–36 tiles at several viewport sizes, state sanitising, preset integrity |
+| `npm run check` | Reports which built-in feeds are live right now (needs internet) |
+
+CI (`.github/workflows/ci.yml`) runs typecheck, lint, format check, tests and build.
+The build uses relative asset paths, so it works under any sub-path
+(e.g. `https://example.com/livewall/`).
+
+> YouTube refuses to embed from `file://`; use `npm run dev` or `npm run preview`
 > rather than opening `index.html` directly.
 
 ## Sound
@@ -53,7 +67,7 @@ The toolbar fades out after a couple of seconds without mouse movement.
 | Webcams · Cities & Wild | Shibuya, Abbey Road, Times Square, Jackson Hole, Venice, Dublin, Namib waterhole, ISS |
 | Electronics Store | 12 mixed: news, markets, space, webcams, lofi |
 
-Sets live in [`site/js/presets.js`](site/js/presets.js). Feeds are either a
+Sets live in [`src/presets.ts`](src/presets.ts). Feeds are either a
 **channel ID** (`UC…`), which always embeds whatever that channel is live on
 *right now* and so survives the stream restarting, or a fixed **video ID**.
 
@@ -79,13 +93,16 @@ starts a new broadcast. Nothing here is guaranteed to be live forever, so:
 ## Layout of the repo
 
 ```
-site/index.html        page shell
-site/css/style.css     all five skins
-site/js/app.js         tiles, audio manager, modes, editor
-site/js/yt.js          YouTube IFrame API wrapper (fades, watchdog, retry)
-site/js/layout.js      pure layout math
-site/js/presets.js     built-in feed sets
-site/js/feeds.js       URL parsing / embed URLs
-site/js/store.js       localStorage + share links
-scripts/check-feeds.mjs
+index.html             page shell
+src/app.ts             boot, audio manager, modes, editor
+src/tile.ts            one feed's DOM + player
+src/yt.ts              YouTube IFrame API wrapper (fades, watchdog, retry)
+src/layout.ts          pure layout math (grid, spotlight, CRT pyramid)
+src/presets.ts         built-in feed sets
+src/feeds.ts           URL parsing / embed URLs
+src/store.ts           localStorage + share links, input sanitising
+src/types.ts           shared types
+src/styles/style.css   all five skins
+tests/                 Vitest suites
+scripts/check-feeds.ts feed-liveness checker
 ```

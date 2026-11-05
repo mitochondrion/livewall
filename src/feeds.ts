@@ -1,17 +1,20 @@
 // Feed helpers: identity, URLs, and parsing whatever the user pastes.
+import type { Feed, FeedDef, Source } from './types';
 
-export const uid = () => Math.random().toString(36).slice(2, 10);
+export const uid = (): string => Math.random().toString(36).slice(2, 10);
 
 /** Stable identity of what a feed points at. */
-export const feedKey = (f) => (f.ch ? `ch:${f.ch}` : `v:${f.v}`);
+export const feedKey = (f: Source): string => (f.ch ? `ch:${f.ch}` : `v:${f.v}`);
 
-export const feedUrl = (f) =>
-  f.ch
-    ? `https://www.youtube.com/channel/${f.ch}/live`
-    : `https://www.youtube.com/watch?v=${f.v}`;
+export const feedUrl = (f: Source): string =>
+  f.ch ? `https://www.youtube.com/channel/${f.ch}/live` : `https://www.youtube.com/watch?v=${f.v}`;
+
+export const sourceText = (f: Source): string => f.ch ?? f.v ?? '';
+
+export const withId = (f: FeedDef): Feed => ({ ...f, id: uid() });
 
 /** Embed URL for the IFrame API. */
-export function embedSrc(f, origin) {
+export function embedSrc(f: Source, origin?: string): string {
   const p = new URLSearchParams({
     enablejsapi: '1',
     autoplay: '1',
@@ -25,7 +28,7 @@ export function embedSrc(f, origin) {
     disablekb: '1',
   });
   if (origin && origin !== 'null') p.set('origin', origin);
-  if (f.ch) {
+  if (f.ch !== undefined) {
     p.set('channel', f.ch);
     return `https://www.youtube.com/embed/live_stream?${p}`;
   }
@@ -37,18 +40,23 @@ export function embedSrc(f, origin) {
 const VID = /^[\w-]{11}$/;
 const CHAN = /^UC[\w-]{22}$/;
 
+export const isVideoId = (s: unknown): s is string => typeof s === 'string' && VID.test(s);
+export const isChannelId = (s: unknown): s is string => typeof s === 'string' && CHAN.test(s);
+
+export type ParseResult = Source | { error: string };
+export const isParseError = (r: ParseResult): r is { error: string } => 'error' in r;
+
 /**
  * Accepts a watch/live/embed/shorts/youtu.be URL, a /channel/UC… URL,
  * a bare video ID, or a bare channel ID.
- * Returns {v} | {ch} | {error}.
  */
-export function parseSource(raw) {
+export function parseSource(raw: string): ParseResult {
   const s = (raw || '').trim();
   if (!s) return { error: 'Paste a YouTube URL or ID' };
-  if (CHAN.test(s)) return { ch: s };
-  if (VID.test(s)) return { v: s };
+  if (isChannelId(s)) return { ch: s };
+  if (isVideoId(s)) return { v: s };
 
-  let u;
+  let u: URL;
   try {
     u = new URL(/^https?:\/\//i.test(s) ? s : `https://${s}`);
   } catch {
@@ -58,17 +66,17 @@ export function parseSource(raw) {
 
   if (host === 'youtu.be') {
     const id = u.pathname.slice(1, 12);
-    if (VID.test(id)) return { v: id };
+    if (isVideoId(id)) return { v: id };
   }
   if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
     const v = u.searchParams.get('v');
-    if (v && VID.test(v)) return { v };
+    if (isVideoId(v)) return { v };
     const ch = u.searchParams.get('channel');
-    if (ch && CHAN.test(ch)) return { ch };
+    if (isChannelId(ch)) return { ch };
     const vm = u.pathname.match(/^\/(?:live|embed|shorts|v)\/([\w-]{11})(?:\/|$)/);
-    if (vm) return { v: vm[1] };
+    if (vm?.[1]) return { v: vm[1] };
     const cm = u.pathname.match(/^\/channel\/(UC[\w-]{22})/);
-    if (cm) return { ch: cm[1] };
+    if (cm?.[1]) return { ch: cm[1] };
     if (u.pathname.startsWith('/@') || u.pathname.startsWith('/c/')) {
       return {
         error:
@@ -78,6 +86,3 @@ export function parseSource(raw) {
   }
   return { error: 'Couldn’t find a video or channel ID in that' };
 }
-
-/** What to show in the editor's source box. */
-export const sourceText = (f) => f.ch || f.v;

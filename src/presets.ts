@@ -8,8 +8,10 @@
 // Run `npm run check` from a machine with normal internet access to see which
 // of these are live right now.
 
-const C = (t, ch) => ({ t, ch });
-const V = (t, v) => ({ t, v });
+import type { FeedDef, Preset } from './types';
+
+const C = (t: string, ch: string): FeedDef => ({ t, ch });
+const V = (t: string, v: string): FeedDef => ({ t, v });
 
 const FEEDS = {
   sky: C('Sky News', 'UCoMdktPbSTixAyNGwb-UYkQ'),
@@ -45,9 +47,9 @@ const FEEDS = {
   namib: V('Namib Desert Waterhole', 'ydYDqZQpim8'),
 };
 
-const pick = (...keys) => keys.map((k) => FEEDS[k]);
+const pick = (...keys: (keyof typeof FEEDS)[]): FeedDef[] => keys.map((k) => FEEDS[k]);
 
-export const PRESETS = [
+export const PRESETS: Preset[] = [
   {
     id: 'newsroom',
     name: 'Newsroom · World',
@@ -82,8 +84,21 @@ export const PRESETS = [
     id: 'storefront',
     name: 'Electronics Store',
     desc: 'A little of everything, like 12 TVs left on different channels',
-    feeds: pick('sky', 'bbg', 'nasa', 'shibuya', 'lofi', 'aje', 'namib', 'spacex', 'abbey', 'cnbc', 'dw', 'iss'),
+    feeds: pick(
+      'sky',
+      'bbg',
+      'nasa',
+      'shibuya',
+      'lofi',
+      'aje',
+      'namib',
+      'spacex',
+      'abbey',
+      'cnbc',
+      'dw',
+      'iss',
+    ),
   },
 ];
 
-export const presetById = (id) => PRESETS.find((p) => p.id === id);
+export const presetById = (id: string): Preset | undefined => PRESETS.find((p) => p.id === id);
