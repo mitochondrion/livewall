@@ -1,78 +1,91 @@
-## Push to github pages
+# Livewall
+
+A wall of live YouTube streams, with sound from one at a time. Think trading
+floor, newsroom, security desk, or a row of TVs in an electronics-store window.
+
+No build step and no dependencies: plain HTML, CSS and ES modules in `site/`.
+
 ```bash
-npm run deploy
+npm start          # serves site/ at http://localhost:8080
+npm run check      # reports which built-in feeds are live right now (needs internet)
+npm run deploy     # publishes site/ to the gh-pages branch
 ```
 
----
-(original boilerplate)
+> YouTube refuses to embed from `file://`, so serve the page over http(s)
+> rather than opening `index.html` directly.
 
-# Getting Started with Create React App
+## Sound
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Every tile starts muted; exactly one is ever audible.
 
-## Available Scripts
+| Control | What it does |
+| --- | --- |
+| **Hover** (default) | Sound follows the mouse, with a short crossfade. Click a tile to *pin* it; the pin is what you hear when the mouse isn't on anything. |
+| **Click** | Sound changes only when you click. Used automatically on touch screens. |
+| `1`–`9`, `←` `→` | Pin a specific tile / step through tiles |
+| `M` | Mute everything |
+| **Tour** (`T`) | Pins the next feed every 15 s, like channel surfing |
 
-In the project directory, you can run:
+Browsers block audio until you've interacted with the page, so the first click
+or key press turns sound on.
 
-### `yarn start`
+## Modes
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+| Key | Mode | |
+| --- | --- | --- |
+| `W` | **Wall** | Auto-fitted grid that maximises tile size for the window. |
+| `S` | **Spotlight** | One big feed plus a rail of the rest. Click a rail tile to promote it. Sound defaults to the big one. |
+| `C` | **CRT** | A stack of old TVs in a shop window: pyramid layout, scanlines, glass glare, a green LED on the set that's playing, and a tuning glitch when you switch. |
+| `V` | **CCTV** | Security desk: desaturated feeds, `CAM 03` labels, live timestamps, blinking REC. |
+| `Z` | **Minimal** | Edge-to-edge video, no gaps, no labels, hidden cursor. Move to the top edge for controls. |
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+`F` fullscreen · `E` edit feeds · `H` hide the toolbar · `?` help.
+The toolbar fades out after a couple of seconds without mouse movement.
 
-### `yarn test`
+## Feed sets
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+| Set | Contents |
+| --- | --- |
+| Newsroom · World | Sky, Al Jazeera, France 24, DW, Euronews, ABC Australia, CNA, WION, TRT World |
+| Newsroom · US | ABC, NBC, CBS, LiveNOW from FOX, PBS NewsHour, Bloomberg, Yahoo Finance, Reuters |
+| Trading Floor | Bloomberg, CNBC, Yahoo Finance, Reuters + CNA, Sky, Al Jazeera, DW, France 24 |
+| Mission Control | NASA, SpaceX, NASASpaceflight, ESA, ISS Earth view |
+| Webcams · Cities & Wild | Shibuya, Abbey Road, Times Square, Jackson Hole, Venice, Dublin, Namib waterhole, ISS |
+| Electronics Store | 12 mixed: news, markets, space, webcams, lofi |
 
-### `yarn build`
+Sets live in [`site/js/presets.js`](site/js/presets.js). Feeds are either a
+**channel ID** (`UC…`), which always embeds whatever that channel is live on
+*right now* and so survives the stream restarting, or a fixed **video ID**.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Keeping feeds alive
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Live streams come and go, and webcam video IDs go stale whenever the owner
+starts a new broadcast. Nothing here is guaranteed to be live forever, so:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- A tile that never starts playing shows **NO SIGNAL** and retries every 3 min.
+- `npm run check` tests every built-in feed and tells you which are dead.
+- The **Feeds** panel (`E`) edits any tile in place: paste a watch / youtu.be /
+  `/live/` URL, a `/channel/UC…` URL, or a bare video or channel ID.
+  `@handle` URLs can't be embedded; use the channel ID (About → Share → Copy channel ID).
+- **Copy share link** encodes your current set and mode in the URL hash.
 
-### `yarn eject`
+## Notes and limits
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+- Twenty HD streams is a lot for any machine. Around 9–12 is comfortable; the
+  hard cap is 36. YouTube's player ignores quality hints, so there's no "eco" mode.
+- Some channels disable embedding; those show NO SIGNAL.
+- YouTube may show a cookie/consent or age prompt inside a tile in some regions.
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Layout of the repo
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `yarn build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```
+site/index.html        page shell
+site/css/style.css     all five skins
+site/js/app.js         tiles, audio manager, modes, editor
+site/js/yt.js          YouTube IFrame API wrapper (fades, watchdog, retry)
+site/js/layout.js      pure layout math
+site/js/presets.js     built-in feed sets
+site/js/feeds.js       URL parsing / embed URLs
+site/js/store.js       localStorage + share links
+scripts/check-feeds.mjs
+```

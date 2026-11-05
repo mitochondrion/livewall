@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#08090b">
+  <meta name="description" content="A wall of live YouTube streams. Sound from one at a time.">
+  <title>Livewall</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2308090b'/%3E%3Crect x='4' y='6' width='11' height='9' rx='1.5' fill='%23ff3b3b'/%3E%3Crect x='17' y='6' width='11' height='9' rx='1.5' fill='%23555'/%3E%3Crect x='4' y='17' width='11' height='9' rx='1.5' fill='%23555'/%3E%3Crect x='17' y='17' width='11' height='9' rx='1.5' fill='%23555'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-mode="wall">
+  <main id="wall" aria-label="Live stream wall"></main>
+
+  <button id="gate" type="button">
+    <span class="gate-dot"></span>
+    <span>Click anywhere to turn the sound on</span>
+  </button>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <header id="bar">
+    <div class="brand"><span class="brand-dot"></span>LIVEWALL</div>
+
+    <label class="field">
+      <span class="sr">Feed set</span>
+      <select id="preset" title="Feed set"></select>
+    </label>
+
+    <div class="seg" id="modes" role="group" aria-label="View mode">
+      <button data-mode="wall" title="Wall (W)">Wall</button>
+      <button data-mode="spotlight" title="Spotlight (S)">Spotlight</button>
+      <button data-mode="crt" title="CRT store window (C)">CRT</button>
+      <button data-mode="cctv" title="Security desk (V)">CCTV</button>
+      <button data-mode="zen" title="Minimal, almost no UI (Z)">Minimal</button>
+    </div>
+
+    <div class="seg" id="audio-mode" role="group" aria-label="How sound is chosen">
+      <button data-audio="hover" title="Sound follows the mouse; click to pin">Hover</button>
+      <button data-audio="click" title="Sound only changes when you click">Click</button>
+    </div>
+
+    <div class="vol">
+      <button id="mute" title="Mute all (M)" aria-label="Mute all">🔊</button>
+      <input id="volume" type="range" min="0" max="100" aria-label="Volume">
+    </div>
+
+    <button id="tour" class="toggle" title="Auto-cycle sound through the feeds (T)">Tour</button>
+    <button id="fs" title="Fullscreen (F)">⛶</button>
+    <button id="edit" title="Edit feeds (E)">Feeds</button>
+    <button id="help-btn" title="Help (?)" aria-label="Help">?</button>
+  </header>
+
+  <aside id="drawer" aria-label="Edit feeds">
+    <div class="drawer-head">
+      <h2>Feeds</h2>
+      <button id="drawer-close" aria-label="Close">✕</button>
+    </div>
+    <div id="rows"></div>
+    <form id="add" autocomplete="off">
+      <input id="add-src" placeholder="Add: YouTube URL, video ID or channel ID (UC…)" spellcheck="false">
+      <button>Add</button>
+    </form>
+    <div class="drawer-foot">
+      <button id="share">Copy share link</button>
+      <button id="reset">Reset to set</button>
+    </div>
+    <p class="hint">
+      Channel IDs (<code>UC…</code>) always point at that channel’s <em>current</em> live stream.
+      Video IDs are fixed. Stale tiles show NO SIGNAL and retry every few minutes.
+    </p>
+  </aside>
+
+  <dialog id="help">
+    <h2>Livewall</h2>
+    <p>Every tile is muted except one. Move the mouse onto a tile to hear it; click to pin it.</p>
+    <table>
+      <tr><td><kbd>W</kbd> <kbd>S</kbd> <kbd>C</kbd> <kbd>V</kbd> <kbd>Z</kbd></td><td>Wall · Spotlight · CRT · CCTV · Minimal</td></tr>
+      <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>Pin sound to that tile (<kbd>0</kbd> to unpin)</td></tr>
+      <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Previous / next tile</td></tr>
+      <tr><td><kbd>M</kbd></td><td>Mute everything</td></tr>
+      <tr><td><kbd>T</kbd></td><td>Tour: pin cycles through the feeds</td></tr>
+      <tr><td><kbd>F</kbd></td><td>Fullscreen</td></tr>
+      <tr><td><kbd>E</kbd></td><td>Edit feeds</td></tr>
+      <tr><td><kbd>H</kbd></td><td>Hide / show the toolbar</td></tr>
+    </table>
+    <form method="dialog"><button>Close</button></form>
+  </dialog>
+
+  <noscript><p style="color:#fff;padding:2rem">Livewall needs JavaScript.</p></noscript>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
